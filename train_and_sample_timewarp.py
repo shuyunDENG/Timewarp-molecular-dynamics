@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 import os
 
-# ====== 你的模型文件，确保导入 create_integrated_timewarp_model ======
-from model_et_sampling import create_integrated_timewarp_model
+# Import the integrated Timewarp model from src/
+from src.model_et_sampling import create_integrated_timewarp_model
 
-# ====== 数据集定义（用你现成的类）======
+# Molecular dataset definition
 class MolecularDataset(Dataset):
     def __init__(self, data_indices, full_data):
         self.data_indices = data_indices
@@ -42,9 +42,9 @@ def normalize_data(data):
     normed[:, :, :, :3] = (positions - pos_mean) / pos_std
     return normed, (pos_mean, pos_std)
 
-# ========== 训练主循环 ==========
+# Main training loop
 def train_timewarp(
-    data_path='training_pairs_augmented_final.npy',
+    data_path='data/training_pairs_augmented_final.npy',
     num_epochs=150,
     batch_size=16,
     learning_rate=1e-4,
@@ -52,7 +52,7 @@ def train_timewarp(
     device='cuda' if torch.cuda.is_available() else 'cpu',
     model_ckpt='best_timewarp_model.pth'
 ):
-    print("=== 开始训练 Timewarp 集成模型 ===")
+    print("=== Starting Timewarp Integrated Model Training ===")
     full_data = np.load(data_path)
     full_data, norm_stats = normalize_data(full_data)
 
@@ -125,7 +125,7 @@ def train_timewarp(
 
         print(f"Epoch {epoch+1}/{num_epochs} | Train Loss: {avg_train_loss:.4f} | Test Loss: {avg_test_loss:.4f} | Train LL: {avg_train_ll:.4f} | Test LL: {avg_test_ll:.4f}")
 
-        # 保存最佳
+        # Save best model
         if avg_test_ll > best_test_ll:
             best_test_ll = avg_test_ll
             torch.save({
@@ -136,15 +136,15 @@ def train_timewarp(
                 'test_ll': avg_test_ll
             }, model_ckpt)
 
-    # 画学习曲线
+    # Plot learning curves
     plt.figure()
     plt.plot(train_losses, label='Train Loss')
     plt.plot(test_losses, label='Test Loss')
     plt.legend()
     plt.title('Loss')
-    plt.savefig('train_loss_curve.png', dpi=120)
+    plt.savefig('results/train_loss_curve.png', dpi=120)
     plt.close()
-    print("训练结束！最佳模型已保存：", model_ckpt)
+    print("Training complete! Best model saved:", model_ckpt)
 
 def sample_with_trained_model(model_ckpt='best_timewarp_model.pth', num_steps=1000):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -153,25 +153,25 @@ def sample_with_trained_model(model_ckpt='best_timewarp_model.pth', num_steps=10
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 
-    # 示例采样
+    # Example sampling
     batch_size, num_atoms = 1, 22
     atom_types = torch.tensor([[0, 1, 0, 2, 3, 3, 3, 0, 3, 0, 2, 1, 3, 0, 0, 2, 3, 3, 3, 3, 3, 3]], dtype=torch.long).to(device)
     initial_coords = torch.randn(batch_size, num_atoms, 3).to(device) * 0.5
     initial_velocs = torch.randn(batch_size, num_atoms, 3).to(device) * 0.1
 
-    print("正在执行集成 MCMC 采样...")
+    print("Performing integrated MCMC sampling...")
     mcmc_results = model.mcmc_sampling(atom_types, initial_coords, initial_velocs, num_steps=num_steps, save_interval=50, batch_proposals=5)
-    print("采样结束！最后采样能量：", mcmc_results['energy_history'][-1])
+    print("Sampling complete! Final energy:", mcmc_results['energy_history'][-1])
     return mcmc_results
 
 if __name__ == '__main__':
-    # 步骤1：训练模型
+    # Step 1: Train the model
     train_timewarp(
-        data_path='training_pairs_augmented_final.npy',
+        data_path='data/training_pairs_augmented_final.npy',
         num_epochs=100,
         batch_size=16,
         learning_rate=1e-5,
-        model_ckpt='best_timewarp_model.pth'
+        model_ckpt='results/best_timewarp_model.pth'
     )
-    # 步骤2：采样
-    sample_with_trained_model(model_ckpt='best_timewarp_model.pth', num_steps=1000)
+    # Step 2: Sample with trained model
+    sample_with_trained_model(model_ckpt='results/best_timewarp_model.pth', num_steps=1000)
