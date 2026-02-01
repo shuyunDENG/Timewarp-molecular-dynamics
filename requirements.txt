@@ -1,0 +1,16 @@
+# Core dependencies
+torch>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+scikit-learn>=1.3.0
+
+# Molecular dynamics simulation and analysis
+openmm>=8.0.0
+mdtraj>=1.9.7
+
+# Optional visualization
+nglview>=3.0.0
+
+# Additional utilities
+scipy>=1.10.0
+tqdm>=4.65.0

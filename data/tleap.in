@@ -1,0 +1,4 @@
+source leaprc.protein.ff14SB
+mol = loadpdb alanine-dipeptide-solvated.pdb
+saveamberparm mol alanine-nowater.prmtop alanine-nowater.inpcrd
+quit
